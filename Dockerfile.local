@@ -1,0 +1,5 @@
+FROM ubuntu:22.04
+
+COPY logbench /usr/local/bin/
+
+ENTRYPOINT ["logbench"]
