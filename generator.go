@@ -4,15 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/brianvoe/gofakeit"
-	"github.com/openzipkin/zipkin-go/idgenerator"
-)
-
-const (
-	JSONLogFormatWithTraceExtraBytes = `{"host":"%s", "user-identifier":"%s", "datetime":"%s", "method": "%s", "request": "%s", "protocol":"%s", "status":%d, "bytes":%d, "referer": "%s", "traceId": "%s", "spanId": "%s", "dummyBytes": "%s"}`
 )
 
 // Generates NDJSON test data.
@@ -20,7 +16,8 @@ func generateLogs(lines int, totalSize int, payloadSize int, start time.Time, in
 	var results []byte
 	var currentSize int
 	for i := 0; i < lines; i++ {
-		log := newJSONLogFormatWithTrace(start.Add(interval*time.Duration(i)), payloadSize) + "\n"
+		timestamp := start.Add(interval * time.Duration(i))
+		log := newTestLog(timestamp, payloadSize) + "\n"
 		results = append(results, []byte(log)...)
 		currentSize += len(log)
 		if currentSize >= totalSize {
@@ -32,25 +29,48 @@ func generateLogs(lines int, totalSize int, payloadSize int, start time.Time, in
 
 const (
 	ClickHouse = "02/Jan/2006:15:04:05 -0700"
+	RFC5424    = "2006-01-02T15:04:05.000Z"
 )
 
-func newJSONLogFormatWithTrace(t time.Time, payloadSize int) string {
-	g := idgenerator.NewRandom128()
-	traceId := g.TraceID()
+type podMetadata struct {
+	PodNamespace  string
+	PodName       string
+	PodNodeName   string
+	PodIP         string
+	PodUID        string
+	AppName       string
+	ContainerName string
+}
+
+func newPodMetadataFromEnv() *podMetadata {
+	return &podMetadata{
+		PodNamespace:  os.Getenv("POD_NAMESPACE"),
+		PodName:       os.Getenv("POD_NAME"),
+		PodNodeName:   os.Getenv("POD_NODE_NAME"),
+		PodIP:         os.Getenv("POD_IP"),
+		PodUID:        os.Getenv("POD_UID"),
+		AppName:       os.Getenv("APP_NAME"),
+		ContainerName: os.Getenv("CONTAINER_NAME"),
+	}
+}
+
+func newTestLog(t time.Time, payloadSize int) string {
+	const (
+		testLogFormat = `{"timestamp": "%s", "kubernetes.container_name":"%s", "kubernetes.pod_labels.app":"%s", "kubernetes.pod_namespace":"%s", "kubernetes.pod_node_name": "%s", "kubernetes.pod_ip": "%s", "kubernetes.pod_name":"%s", "kubernetes.pod_uid":"%s", "message": "%s"}`
+	)
+
+	podMetadata := newPodMetadataFromEnv()
 
 	return fmt.Sprintf(
-		JSONLogFormatWithTraceExtraBytes,
-		gofakeit.IPv4Address(),
-		randAuthUserID(),
-		t.Format(ClickHouse),
-		gofakeit.HTTPMethod(),
-		randResourceURI(),
-		randHTTPVersion(),
-		gofakeit.StatusCode(),
-		gofakeit.Number(0, 30000),
-		gofakeit.URL(),
-		traceId.String(),
-		g.SpanID(traceId).String(),
+		testLogFormat,
+		t.Format(RFC5424),
+		podMetadata.ContainerName,
+		podMetadata.AppName,
+		podMetadata.PodNamespace,
+		podMetadata.PodNodeName,
+		podMetadata.PodIP,
+		podMetadata.PodName,
+		podMetadata.PodUID,
 		randomWords(payloadSize),
 	)
 }

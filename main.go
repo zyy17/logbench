@@ -60,10 +60,11 @@ func doBenchmark(opts *Options) {
 	taskNum := opts.Ops / opts.BatchSize
 	start := time.Now()
 	for i := 0; i < taskNum; i++ {
+		startTime := start.Add(time.Duration(i) * opts.Interval * time.Duration(opts.BatchSize))
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			data := generateLogs(opts.BatchSize, opts.TotalSize, payloadSizeByProbabilityDistribution(), start, opts.Interval)
+			data := generateLogs(opts.BatchSize, opts.TotalSize, payloadSizeByProbabilityDistribution(), startTime, opts.Interval)
 			if err := ingestLogs(opts.Endpoint, opts.Db, opts.Table, opts.Pipeline, data, true); err != nil {
 				panic(err)
 			}
