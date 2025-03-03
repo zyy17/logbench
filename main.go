@@ -37,7 +37,7 @@ func main() {
 	payloadSize := flag.Int("payload-size", 100, "payload size to generate logs(bytes)")
 	totalSize := flag.Int("total-size", 5000100, "total size to generate logs(bytes)")
 	appNum := flag.Int("app-num", 1000, "number of apps to generate logs")
-	logSize := flag.Int("log-size", 100, "log size to generate logs(bytes)")
+	logSize := flag.Int("log-size", 0, "log size to generate logs(bytes)")
 	flag.Parse()
 
 	options := &Options{
