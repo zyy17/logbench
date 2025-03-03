@@ -22,6 +22,8 @@ type Options struct {
 	Interval    time.Duration
 	PayloadSize int
 	TotalSize   int
+	AppNum      int
+	LogSize     int
 }
 
 func main() {
@@ -34,6 +36,8 @@ func main() {
 	interval := flag.Duration("interval", time.Second*1, "interval to generate logs")
 	payloadSize := flag.Int("payload-size", 100, "payload size to generate logs(bytes)")
 	totalSize := flag.Int("total-size", 5000100, "total size to generate logs(bytes)")
+	appNum := flag.Int("app-num", 1000, "number of apps to generate logs")
+	logSize := flag.Int("log-size", 100, "log size to generate logs(bytes)")
 	flag.Parse()
 
 	options := &Options{
@@ -46,6 +50,8 @@ func main() {
 		Interval:    *interval,
 		PayloadSize: *payloadSize,
 		TotalSize:   *totalSize,
+		AppNum:      *appNum,
+		LogSize:     *logSize,
 	}
 
 	fmt.Printf("Starting benchmark with options: %+v\n", options)
@@ -64,7 +70,12 @@ func doBenchmark(opts *Options) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			data := generateLogs(opts.BatchSize, opts.TotalSize, payloadSizeByProbabilityDistribution(), startTime, opts.Interval)
+			var data []byte
+			if opts.LogSize > 0 {
+				data = generateLogs(opts.BatchSize, opts.TotalSize, opts.LogSize, startTime, opts.Interval, opts.AppNum)
+			} else {
+				data = generateLogs(opts.BatchSize, opts.TotalSize, payloadSizeByProbabilityDistribution(), startTime, opts.Interval, opts.AppNum)
+			}
 			if err := ingestLogs(opts.Endpoint, opts.Db, opts.Table, opts.Pipeline, data, true); err != nil {
 				panic(err)
 			}

@@ -3,27 +3,24 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"net/url"
 	"os"
-	"strings"
 	"time"
-
-	"github.com/brianvoe/gofakeit"
 )
 
 // Generates NDJSON test data.
-func generateLogs(lines int, totalSize int, payloadSize int, start time.Time, interval time.Duration) []byte {
+func generateLogs(lines int, totalSize int, payloadSize int, start time.Time, interval time.Duration, appNum int) []byte {
 	var results []byte
 	var currentSize int
 	for i := 0; i < lines; i++ {
 		timestamp := start.Add(interval * time.Duration(i))
-		log := newTestLog(timestamp, payloadSize) + "\n"
+		log := newTestLog(timestamp, payloadSize, appNum) + "\n"
 		results = append(results, []byte(log)...)
 		currentSize += len(log)
 		if currentSize >= totalSize {
 			break
 		}
 	}
+
 	return results
 }
 
@@ -54,7 +51,7 @@ func newPodMetadataFromEnv() *podMetadata {
 	}
 }
 
-func newTestLog(t time.Time, payloadSize int) string {
+func newTestLog(t time.Time, payloadSize int, appNum int) string {
 	const (
 		testLogFormat = `{"timestamp": "%s", "kubernetes.container_name":"%s", "kubernetes.pod_labels.app":"%s", "kubernetes.pod_namespace":"%s", "kubernetes.pod_node_name": "%s", "kubernetes.pod_ip": "%s", "kubernetes.pod_name":"%s", "kubernetes.pod_uid":"%s", "message": "%s"}`
 	)
@@ -65,7 +62,7 @@ func newTestLog(t time.Time, payloadSize int) string {
 		testLogFormat,
 		t.Format(RFC5424),
 		podMetadata.ContainerName,
-		podMetadata.AppName,
+		generateRandomAppName(appNum),
 		podMetadata.PodNamespace,
 		podMetadata.PodNodeName,
 		podMetadata.PodIP,
@@ -75,25 +72,6 @@ func newTestLog(t time.Time, payloadSize int) string {
 	)
 }
 
-// RandResourceURI generates a random resource URI
-func randResourceURI() string {
-	var uri string
-	num := gofakeit.Number(1, 4)
-	for i := 0; i < num; i++ {
-		uri += "/" + url.QueryEscape(gofakeit.BS())
-	}
-	uri = strings.ToLower(uri)
-	return uri
-}
-
-// RandAuthUserID generates a random auth user id
-func randAuthUserID() string {
-	candidates := []string{"-", strings.ToLower(gofakeit.Username())}
-	return candidates[rand.Intn(2)]
-}
-
-// RandHTTPVersion returns a random http version
-func randHTTPVersion() string {
-	versions := []string{"HTTP/1.0", "HTTP/1.1", "HTTP/2.0"}
-	return versions[rand.Intn(3)]
+func generateRandomAppName(appNum int) string {
+	return fmt.Sprintf("app-%d", rand.Intn(appNum))
 }

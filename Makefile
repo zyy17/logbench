@@ -7,6 +7,7 @@ else ifeq ($(ARCH), x86_64)
 	ARCH := amd64
 endif
 
+.PHONY: logbench
 logbench:
 	GOMODULE=on CGO_ENABLED=0 go build -o bin/logbench .
 
