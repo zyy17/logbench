@@ -77,7 +77,7 @@ func doBenchmark(opts *Options) {
 				data = generateLogs(opts.BatchSize, opts.TotalSize, payloadSizeByProbabilityDistribution(), startTime, opts.Interval, opts.AppNum)
 			}
 			if err := ingestLogs(opts.Endpoint, opts.Db, opts.Table, opts.Pipeline, data, true); err != nil {
-				panic(err)
+				fmt.Printf("ingest logs failed: %v\n", err)
 			}
 		}()
 	}
