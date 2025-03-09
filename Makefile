@@ -11,6 +11,10 @@ endif
 logbench:
 	GOMODULE=on CGO_ENABLED=0 go build -o bin/logbench .
 
+.PHONY: mocklogs
+mocklogs:
+	GOMODULE=on CGO_ENABLED=0 go build -o bin/mocklogs tools/mocklogs/main.go
+
 build-for-linux:
 	GOOS=linux GOARCH=$(ARCH) GOMODULE=on CGO_ENABLED=0 go build -o bin/logbench .
 
@@ -24,3 +28,5 @@ push-local-test-image: build-local-test-image
 
 clean:
 	rm -rf bin
+	rm -rf *.parquet
+	rm -rf *.json

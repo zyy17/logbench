@@ -102,7 +102,7 @@ func doBenchmark(opts *Options, generator *generator.Generator, ingester *ingest
 			app := fmt.Sprintf("app%d", appIndex)
 			tableName := tableName(cluster, app)
 
-			data, err := generator.Generate(cluster, app, opts.BatchSize)
+			data, err := generator.Generate(cluster, app, opts.BatchSize, time.Now().UnixMilli())
 			if err != nil {
 				fmt.Printf("generate logs failed: %v\n", err)
 			}

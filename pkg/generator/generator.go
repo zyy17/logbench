@@ -36,7 +36,7 @@ func NewGenerator(distributionConfig []string, logSize int64, datasetType datase
 	}, nil
 }
 
-func (g *Generator) Generate(cluster, app string, batchSize int) ([]byte, error) {
+func (g *Generator) Generate(cluster, app string, batchSize int, timestamp int64) ([]byte, error) {
 	var output []byte
 	var logSize int64
 
@@ -46,11 +46,16 @@ func (g *Generator) Generate(cluster, app string, batchSize int) ([]byte, error)
 		logSize = g.logSize
 	}
 
+	// If timestamp is not provided, use the current timestamp
+	if timestamp == 0 {
+		timestamp = time.Now().UnixMilli()
+	}
+
 	for i := 0; i < batchSize; i++ {
 		log := &Log{
 			App:       app,
 			Cluster:   cluster,
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp,
 			Message:   g.generateLogs(logSize),
 		}
 
@@ -61,6 +66,35 @@ func (g *Generator) Generate(cluster, app string, batchSize int) ([]byte, error)
 		serializedData = append(serializedData, '\n')
 
 		output = append(output, serializedData...)
+	}
+
+	return output, nil
+}
+
+func (g *Generator) GenerateLogs(cluster, app string, batchSize int, timestamp int64) ([]*Log, error) {
+	var output []*Log
+	var logSize int64
+
+	if g.logSize == 0 {
+		logSize = g.dt.RandomNumber()
+	} else {
+		logSize = g.logSize
+	}
+
+	// If timestamp is not provided, use the current timestamp
+	if timestamp == 0 {
+		timestamp = time.Now().UnixMilli()
+	}
+
+	for i := 0; i < batchSize; i++ {
+		log := &Log{
+			App:       app,
+			Cluster:   cluster,
+			Timestamp: timestamp,
+			Message:   g.generateLogs(logSize),
+		}
+
+		output = append(output, log)
 	}
 
 	return output, nil
