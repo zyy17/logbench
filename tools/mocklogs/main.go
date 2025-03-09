@@ -145,7 +145,7 @@ func main() {
 			}
 			size += len(logs)
 		} else {
-			logs, err := generator.GenerateLogs(options.Cluster, options.App, options.IntervalCount, startTime.UnixMilli())
+			logs, err := generator.GenerateLogs(options.Cluster, options.App, options.IntervalCount, startTime.UnixNano())
 			if err != nil {
 				log.Fatalf("failed to generate logs: %v", err)
 			}
