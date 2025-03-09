@@ -1,5 +1,6 @@
 FROM ubuntu:22.04
 
 COPY logbench /usr/local/bin/
+COPY mocklogs /usr/local/bin/
 
 ENTRYPOINT ["logbench"]

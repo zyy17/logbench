@@ -5,4 +5,5 @@
   -cluster cluster1 \
   -app app1 \
   -interval 1s \
+  -output-dir .output \
   -format parquet

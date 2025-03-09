@@ -19,11 +19,13 @@ mocklogs:
 
 build-for-linux:
 	GOOS=linux GOARCH=$(ARCH) GOMODULE=on CGO_ENABLED=0 go build -o bin/logbench .
-
+	GOOS=linux GOARCH=$(ARCH) GOMODULE=on CGO_ENABLED=0 go build -o bin/mocklogs tools/mocklogs/main.go
 build-local-test-image: build-for-linux
 	@cp bin/logbench logbench
+	@cp bin/mocklogs mocklogs
 	docker build -t localhost:5001/logbench:latest . -f Dockerfile.local
 	@rm logbench
+	@rm mocklogs
 
 push-local-test-image: build-local-test-image
 	docker push localhost:5001/logbench:latest

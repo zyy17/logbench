@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/xitongsys/parquet-go-source/local"
@@ -23,7 +24,7 @@ type Options struct {
 	IntervalCount int
 	Cluster       string
 	App           string
-	Output        string
+	OutputDir     string
 	Format        string
 	Interval      string
 }
@@ -50,7 +51,7 @@ func main() {
 	flag.IntVar(&options.IntervalCount, "interval-count", 1, "interval count(seconds)")
 	flag.StringVar(&options.Cluster, "cluster", "", "cluster")
 	flag.StringVar(&options.App, "app", "", "app")
-	flag.StringVar(&options.Output, "output", "", "output file")
+	flag.StringVar(&options.OutputDir, "output-dir", "", "output directory")
 	flag.StringVar(&options.Format, "format", "json", "output format, can be json or parquet")
 	flag.StringVar(&options.Interval, "interval", "1s", "interval")
 	flag.Parse()
@@ -82,16 +83,20 @@ func main() {
 		log.Fatalf("app is required")
 	}
 
-	if options.Output == "" {
-		options.Output = fmt.Sprintf("%s_%s-[%s-%s].%s", options.Cluster, options.App, options.StartTime, options.EndTime, options.Format)
+	if options.OutputDir == "" {
+		log.Fatalf("log output directory is required")
 	}
 
 	if options.Format != string(FormatJSON) && options.Format != string(FormatParquet) {
 		log.Fatalf("unsupported format: %s", options.Format)
 	}
 
-	log.Printf("Generating %s logs cluster: '%s', app: '%s', from %s to %s, interval: %s, interval count: %d, output: %s",
-		options.Format, options.Cluster, options.App, options.StartTime, options.EndTime, options.Interval, options.IntervalCount, options.Output)
+	if err := os.MkdirAll(options.OutputDir, 0755); err != nil {
+		log.Fatalf("failed to create output directory: %v", err)
+	}
+
+	log.Printf("Generating %s logs cluster: '%s', app: '%s', from [%s] to [%s], interval: '%s', interval count: '%d', output directory: '%s'",
+		options.Format, options.Cluster, options.App, options.StartTime, options.EndTime, options.Interval, options.IntervalCount, options.OutputDir)
 
 	var (
 		fileWriter    io.Writer
@@ -100,12 +105,14 @@ func main() {
 	)
 
 	if options.Format == string(FormatJSON) {
-		fileWriter, err = os.OpenFile(options.Output, os.O_CREATE|os.O_WRONLY, 0644)
+		outputFile := filepath.Join(options.OutputDir, fileName(options))
+		fileWriter, err = os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatalf("failed to create output file: %v", err)
 		}
 	} else {
-		parquetFile, err = local.NewLocalFileWriter(options.Output)
+		outputFile := filepath.Join(options.OutputDir, fileName(options))
+		parquetFile, err = local.NewLocalFileWriter(outputFile)
 		if err != nil {
 			log.Fatalf("failed to create output file: %v", err)
 		}
@@ -125,6 +132,7 @@ func main() {
 
 	count := 0
 	start := time.Now()
+	size := 0
 	for startTime.Before(endTime) {
 		if options.Format == string(FormatJSON) {
 			logs, err := generator.Generate(options.Cluster, options.App, options.IntervalCount, startTime.Format(time.RFC3339), 0)
@@ -135,6 +143,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("failed to write logs: %v", err)
 			}
+			size += len(logs)
 		} else {
 			logs, err := generator.GenerateLogs(options.Cluster, options.App, options.IntervalCount, startTime.UnixMilli())
 			if err != nil {
@@ -144,6 +153,7 @@ func main() {
 				if err := parquetWriter.Write(generatedLog); err != nil {
 					log.Fatalf("failed to write logs: %v", err)
 				}
+				size += len(generatedLog.Message)
 			}
 		}
 
@@ -160,5 +170,12 @@ func main() {
 		}
 	}
 
-	log.Printf("Generated %d logs in %v", count, time.Since(start))
+	log.Printf("Generated '%d' file in '%v', approximate size: '%d MB'", count, time.Since(start), size/1024/1024)
+}
+
+// The file name will be like:
+// cluster1_app1-[2025-03-02T00:00:00Z-2025-03-02T01:00:00Z].json
+// cluster1_app1-[2025-03-02T00:00:00Z-2025-03-02T01:00:00Z].parquet
+func fileName(options *Options) string {
+	return fmt.Sprintf("%s_%s-[%s-%s].%s", options.Cluster, options.App, options.StartTime, options.EndTime, options.Format)
 }
