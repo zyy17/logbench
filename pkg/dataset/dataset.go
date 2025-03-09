@@ -24,7 +24,7 @@ var Datasets = make(map[DatasetType]*Dataset)
 //go:embed Apache_2k.log
 var apacheLogs []byte
 
-//go:embed ZooKeeper_2k.log
+//go:embed Zookeeper_2k.log
 var zookeeperLogs []byte
 
 func init() {

@@ -90,8 +90,8 @@ func main() {
 		log.Fatalf("unsupported format: %s", options.Format)
 	}
 
-	log.Printf("Generating logs from %s to %s, interval: %s, interval count: %d, output: %s",
-		options.StartTime, options.EndTime, options.Interval, options.IntervalCount, options.Output)
+	log.Printf("Generating %s logs cluster: '%s', app: '%s', from %s to %s, interval: %s, interval count: %d, output: %s",
+		options.Format, options.Cluster, options.App, options.StartTime, options.EndTime, options.Interval, options.IntervalCount, options.Output)
 
 	var (
 		fileWriter    io.Writer
@@ -160,5 +160,5 @@ func main() {
 		}
 	}
 
-	log.Printf("generated %d logs in %v", count, time.Since(start))
+	log.Printf("Generated %d logs in %v", count, time.Since(start))
 }
