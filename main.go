@@ -17,7 +17,6 @@ type Options struct {
 	BatchSize  int
 	Ops        int
 	Endpoint   string
-	Db         string
 	Pipeline   string
 	AppNum     int
 	ClusterNum int
@@ -36,7 +35,6 @@ func main() {
 	batchSize := flag.Int("batch-size", 0, "number of logs to ingest")
 	ops := flag.Int("ops", 0, "number of operations to perform")
 	endpoint := flag.String("endpoint", "http://localhost:4000", "endpoint to ingest logs to")
-	db := flag.String("db", "public", "database to ingest logs to")
 	pipeline := flag.String("pipeline", "greptime_identity", "pipeline name to ingest logs to")
 	appNum := flag.Int("app-num", 50, "number of apps to generate logs")
 	clusterNum := flag.Int("cluster-num", 40, "number of clusters to generate logs")
@@ -62,7 +60,6 @@ func main() {
 		BatchSize:  *batchSize,
 		Ops:        *ops,
 		Endpoint:   *endpoint,
-		Db:         *db,
 		Pipeline:   *pipeline,
 		AppNum:     *appNum,
 		ClusterNum: *clusterNum,
@@ -74,7 +71,7 @@ func main() {
 		panic(err)
 	}
 
-	ingester, err := ingester.NewIngester(options.Endpoint, options.Db, options.Pipeline, true)
+	ingester, err := ingester.NewIngester(options.Endpoint, options.Pipeline, true)
 	if err != nil {
 		panic(err)
 	}
@@ -96,18 +93,17 @@ func doBenchmark(opts *Options, generator *generator.Generator, ingester *ingest
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			clusterIndex := rand.Intn(opts.ClusterNum)
-			appIndex := rand.Intn(opts.AppNum)
+			clusterIndex := rand.Intn(opts.ClusterNum) + 1
+			appIndex := rand.Intn(opts.AppNum) + 1
 			cluster := fmt.Sprintf("cluster%d", clusterIndex)
 			app := fmt.Sprintf("app%d", appIndex)
-			tableName := tableName(cluster, app)
 
-			data, err := generator.Generate(cluster, app, opts.BatchSize, time.Now().UnixMilli())
+			data, err := generator.Generate(cluster, app, opts.BatchSize, time.Now().Format(time.RFC3339), 0)
 			if err != nil {
 				fmt.Printf("generate logs failed: %v\n", err)
 			}
 
-			if err := ingester.Ingest(tableName, data); err != nil {
+			if err := ingester.Ingest(cluster, app, data); err != nil {
 				fmt.Printf("ingest logs failed: %v\n", err)
 			}
 		}()
@@ -119,8 +115,4 @@ func doBenchmark(opts *Options, generator *generator.Generator, ingester *ingest
 	if elapsed < time.Second*1 {
 		time.Sleep(time.Second*1 - elapsed)
 	}
-}
-
-func tableName(cluster, app string) string {
-	return fmt.Sprintf("%s_%s", cluster, app)
 }

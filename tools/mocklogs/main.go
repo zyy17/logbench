@@ -127,7 +127,7 @@ func main() {
 	start := time.Now()
 	for startTime.Before(endTime) {
 		if options.Format == string(FormatJSON) {
-			logs, err := generator.Generate(options.Cluster, options.App, options.IntervalCount, startTime.UnixMilli())
+			logs, err := generator.Generate(options.Cluster, options.App, options.IntervalCount, startTime.Format(time.RFC3339), 0)
 			if err != nil {
 				log.Fatalf("failed to generate logs: %v", err)
 			}

@@ -10,22 +10,20 @@ import (
 
 type Ingester struct {
 	endpoint   string
-	db         string
 	pipeline   string
 	enableGzip bool
 }
 
-func NewIngester(endpoint, db, pipeline string, enableGzip bool) (*Ingester, error) {
+func NewIngester(endpoint, pipeline string, enableGzip bool) (*Ingester, error) {
 	return &Ingester{
 		endpoint:   endpoint,
-		db:         db,
 		pipeline:   pipeline,
 		enableGzip: enableGzip,
 	}, nil
 }
 
-func (i *Ingester) Ingest(table string, input []byte) error {
-	url := i.eventURL(table)
+func (i *Ingester) Ingest(database, table string, input []byte) error {
+	url := i.eventURL(database, table)
 
 	var buffer bytes.Buffer
 	if i.enableGzip {
@@ -67,6 +65,6 @@ func (i *Ingester) Ingest(table string, input []byte) error {
 	return nil
 }
 
-func (i *Ingester) eventURL(table string) string {
-	return fmt.Sprintf("%s/v1/events/logs?db=%s&table=%s&pipeline_name=%s", i.endpoint, i.db, table, i.pipeline)
+func (i *Ingester) eventURL(database, table string) string {
+	return fmt.Sprintf("%s/v1/events/logs?db=%s&table=%s&pipeline_name=%s", i.endpoint, database, table, i.pipeline)
 }

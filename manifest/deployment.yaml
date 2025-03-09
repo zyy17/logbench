@@ -22,15 +22,13 @@ spec:
             - -batch-size
             - "500"
             - -ops
-            - "5000"
+            - "1000"
             - -endpoint
             - http://mycluster-frontend.default.svc.cluster.local:4000
-            - -db
-            - public
             - -cluster-num
-            - "40"
+            - "4"
             - -app-num
-            - "50"
+            - "5"
           resources:
             requests:
               cpu: 100m
