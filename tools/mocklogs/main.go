@@ -27,6 +27,7 @@ type Options struct {
 	OutputDir     string
 	Format        string
 	Interval      string
+	Precision     string
 }
 
 var distributionConfig = []string{
@@ -54,6 +55,7 @@ func main() {
 	flag.StringVar(&options.OutputDir, "output-dir", "", "output directory")
 	flag.StringVar(&options.Format, "format", "json", "output format, can be json or parquet")
 	flag.StringVar(&options.Interval, "interval", "1s", "interval")
+	flag.StringVar(&options.Precision, "precision", "ms", "precision, can be ms or ns")
 	flag.Parse()
 
 	startTime, err := time.Parse(time.RFC3339, options.StartTime)
@@ -91,12 +93,16 @@ func main() {
 		log.Fatalf("unsupported format: %s", options.Format)
 	}
 
+	if options.Precision == "" {
+		options.Precision = "ns"
+	}
+
 	if err := os.MkdirAll(options.OutputDir, 0755); err != nil {
 		log.Fatalf("failed to create output directory: %v", err)
 	}
 
-	log.Printf("Generating %s logs cluster: '%s', app: '%s', from [%s] to [%s], interval: '%s', interval count: '%d', output directory: '%s'",
-		options.Format, options.Cluster, options.App, options.StartTime, options.EndTime, options.Interval, options.IntervalCount, options.OutputDir)
+	log.Printf("Generating %s logs cluster: '%s', app: '%s', precision: '%s', from [%s] to [%s], interval: '%s', interval count: '%d', output directory: '%s'",
+		options.Format, options.Cluster, options.App, options.Precision, options.StartTime, options.EndTime, options.Interval, options.IntervalCount, options.OutputDir)
 
 	var (
 		fileWriter    io.Writer
@@ -145,7 +151,7 @@ func main() {
 			}
 			size += len(logs)
 		} else {
-			logs, err := generator.GenerateLogs(options.Cluster, options.App, options.IntervalCount, startTime.UnixNano())
+			logs, err := generator.GenerateLogs(options.Cluster, options.App, options.IntervalCount, timestamp(options.Precision, startTime))
 			if err != nil {
 				log.Fatalf("failed to generate logs: %v", err)
 			}
@@ -170,12 +176,28 @@ func main() {
 		}
 	}
 
-	log.Printf("Generated '%d' file in '%v', approximate size: '%d MB'", count, time.Since(start), size/1024/1024)
+	log.Printf("Generated '%d' file in '%v', approximate size: '%d MB, output file: '%s'",
+		count, time.Since(start), size/1024/1024, fileName(options))
 }
 
 // The file name will be like:
 // cluster1_app1-[2025-03-02T00:00:00Z-2025-03-02T01:00:00Z].json
 // cluster1_app1-[2025-03-02T00:00:00Z-2025-03-02T01:00:00Z].parquet
 func fileName(options *Options) string {
-	return fmt.Sprintf("%s_%s-[%s-%s].%s", options.Cluster, options.App, options.StartTime, options.EndTime, options.Format)
+	return fmt.Sprintf("%s.%s-[%s-%s].%s", options.Cluster, options.App, options.StartTime, options.EndTime, options.Format)
+}
+
+func timestamp(precision string, timestamp time.Time) int64 {
+	switch precision {
+	case "s":
+		return timestamp.Unix()
+	case "ms":
+		return timestamp.UnixMilli()
+	case "us":
+		return timestamp.UnixMicro()
+	case "ns":
+		return timestamp.UnixNano()
+	default:
+		return timestamp.UnixNano()
+	}
 }
