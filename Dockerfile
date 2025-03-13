@@ -11,5 +11,5 @@ FROM ubuntu:22.04 as base
 WORKDIR /logbench
 COPY --from=builder /logbench/bin/logbench /usr/local/bin/
 COPY --from=builder /logbench/bin/mocklogs /usr/local/bin/
-
+COPY --from=builder /logbench/bin/tracebench /usr/local/bin/
 ENTRYPOINT ["logbench"]

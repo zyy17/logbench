@@ -22,7 +22,7 @@ func NewIngester(endpoint, pipeline string, enableGzip bool) (*Ingester, error) 
 	}, nil
 }
 
-func (i *Ingester) Ingest(database, table string, input []byte) error {
+func (i *Ingester) IngestLogs(database, table string, input []byte) error {
 	url := i.eventURL(database, table)
 
 	var buffer bytes.Buffer
@@ -65,6 +65,33 @@ func (i *Ingester) Ingest(database, table string, input []byte) error {
 	return nil
 }
 
+func (i *Ingester) IngestTraces(input []byte) error {
+	req, err := http.NewRequest("POST", i.traceURL(), bytes.NewBuffer(input))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("x-greptime-log-pipeline-name", "greptime_trace_v1")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
 func (i *Ingester) eventURL(database, table string) string {
 	return fmt.Sprintf("%s/v1/events/logs?db=%s&table=%s&pipeline_name=%s", i.endpoint, database, table, i.pipeline)
+}
+
+func (i *Ingester) traceURL() string {
+	return fmt.Sprintf("%s/v1/otlp/v1/traces", i.endpoint)
 }

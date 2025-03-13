@@ -103,7 +103,7 @@ func doBenchmark(opts *Options, generator *generator.Generator, ingester *ingest
 				fmt.Printf("generate logs failed: %v\n", err)
 			}
 
-			if err := ingester.Ingest(cluster, app, data); err != nil {
+			if err := ingester.IngestLogs(cluster, app, data); err != nil {
 				fmt.Printf("ingest logs failed: %v\n", err)
 			}
 		}()
