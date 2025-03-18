@@ -23,7 +23,7 @@ func NewGenerator() *Generator {
 func (g *Generator) GenerateTraceRequest(serviceName string, timestamp int64, traceNum int, spanNum int) ([]byte, error) {
 	var spans []*tracepb.Span
 	for i := 0; i < traceNum; i++ {
-		spans = append(spans, g.generateSpans(g.generateTraceID(), spanNum, timestamp)...)
+		spans = append(spans, g.generateSpans(g.generateUUID(), spanNum, timestamp)...)
 	}
 
 	request := &collectorpb.ExportTraceServiceRequest{
@@ -49,7 +49,7 @@ func (g *Generator) GenerateTraceRequest(serviceName string, timestamp int64, tr
 	return data, nil
 }
 
-func (g *Generator) generateSpans(traceID string, spanNum int, startTimestamp int64) []*tracepb.Span {
+func (g *Generator) generateSpans(traceID []byte, spanNum int, startTimestamp int64) []*tracepb.Span {
 	spans := make([]*tracepb.Span, 0, spanNum)
 	for i := 0; i < spanNum; i++ {
 		spans = append(spans, g.generateSpan(traceID, startTimestamp))
@@ -57,11 +57,11 @@ func (g *Generator) generateSpans(traceID string, spanNum int, startTimestamp in
 	return spans
 }
 
-func (g *Generator) generateSpan(traceID string, startTimestamp int64) *tracepb.Span {
+func (g *Generator) generateSpan(traceID []byte, startTimestamp int64) *tracepb.Span {
 	span := &tracepb.Span{
-		TraceId:           []byte(traceID),
-		SpanId:            []byte(gofakeit.UUID()),
-		ParentSpanId:      []byte(gofakeit.UUID()),
+		TraceId:           traceID,
+		SpanId:            g.generateUUID(),
+		ParentSpanId:      g.generateUUID(),
 		Kind:              tracepb.Span_SPAN_KIND_INTERNAL,
 		StartTimeUnixNano: uint64(startTimestamp),
 		EndTimeUnixNano:   uint64(startTimestamp) + uint64(gofakeit.Number(1000000, 1000000000)),
@@ -139,8 +139,9 @@ func (g *Generator) generateResourceAttributes(serviceName string) []*commonpb.K
 	}
 }
 
-func (g *Generator) generateTraceID() string {
-	return uuid.New().String()
+func (g *Generator) generateUUID() []byte {
+	id := uuid.New()
+	return id[:]
 }
 
 func (g *Generator) chooseFromStrings(strings []string) string {
